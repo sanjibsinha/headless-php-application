@@ -1,0 +1,55 @@
+# --------------------------------------------------
+# Environment / secrets
+# --------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --------------------------------------------------
+# OS / editor files
+# --------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# --------------------------------------------------
+# DDEV generated files
+# Keep .ddev/config.yaml and other project config,
+# but ignore generated/runtime data.
+# --------------------------------------------------
+.ddev/.db/
+.ddev/.router/
+.ddev/.ssh/
+.ddev/.webimageBuild/
+.ddev/.downloads/
+.ddev/.homeadditions/
+.ddev/.global_command/
+.ddev/.upload-destination/
+.ddev/.webimageBuild/
+.ddev/*.log
+
+# --------------------------------------------------
+# PHP / Composer
+# --------------------------------------------------
+vendor/
+composer.lock
+
+# --------------------------------------------------
+# Logs / temporary files
+# --------------------------------------------------
+*.log
+*.tmp
+*.cache
+
+# --------------------------------------------------
+# WordPress
+# --------------------------------------------------
+wp-content/uploads/
+
+# WordPress generated/cache files
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup-*/
