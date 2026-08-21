@@ -1,0 +1,1301 @@
+# Full Stack App Backend: Installation and Usage Manual
+
+## Turn a Fresh WordPress Installation Into a Headless Application Backend
+
+This manual explains how to install and use the **Full Stack App** WordPress plugin.
+
+The plugin is designed to turn a normal WordPress installation into the backend of a headless website or PHP application.
+
+The basic idea is:
+
+```text
+Fresh WordPress
+       │
+       ▼
+Full Stack App Plugin
+       │
+       ▼
+Custom REST API
+       │
+       ├── Posts
+       ├── Categories
+       ├── Applications
+       └── Status
+       │
+       ▼
+Headless Frontend
+```
+
+WordPress continues to provide the administration interface, database, media library and content-management facilities.
+
+The Full Stack App plugin adds the application layer and exposes the information through a custom API.
+
+This means that a developer can install WordPress, install this plugin, create content through the WordPress dashboard and then consume that content from a completely separate frontend.
+
+---
+
+# 1. What This Package Provides
+
+The Full Stack App backend provides a reusable WordPress-based API layer.
+
+After installation, the plugin creates its own REST API namespace:
+
+```text
+/wp-json/fullstack/v1/
+```
+
+The initial API includes endpoints for:
+
+```text
+status
+posts
+categories
+apps
+```
+
+Conceptually:
+
+```text
+/wp-json/fullstack/v1/status
+
+/wp-json/fullstack/v1/posts
+
+/wp-json/fullstack/v1/posts/{id}
+
+ /wp-json/fullstack/v1/categories
+
+/wp-json/fullstack/v1/categories/{id}
+
+/wp-json/fullstack/v1/apps
+```
+
+The exact API can evolve as the project grows, but the important idea is that the frontend communicates with an application-specific API rather than depending directly on WordPress's default REST representation.
+
+---
+
+# 2. What You Need
+
+For local development, we recommend:
+
+```text
+Docker
+DDEV
+Git
+A web browser
+A terminal
+```
+
+You do not need to install a separate PHP, MySQL or web server stack on the host machine when using DDEV.
+
+DDEV provides a containerized development environment and supports WordPress directly.
+
+For production, the plugin can be installed on a normal WordPress hosting environment. WordPress requires PHP and a MySQL-compatible database, with HTTPS strongly recommended for a public application.
+
+---
+
+# 3. Recommended Development Architecture
+
+For development, we will create two conceptual parts:
+
+```text
+backend/
+    WordPress
+    Full Stack App Plugin
+
+frontend/
+    PHP application
+    HTML
+    CSS
+    JavaScript
+```
+
+At this stage we are concentrating only on the backend.
+
+So our first project will look like:
+
+```text
+my-headless-site/
+└── WordPress
+    ├── wp-admin/
+    ├── wp-content/
+    │   └── plugins/
+    │       └── fullstack-app/
+    ├── wp-includes/
+    └── ...
+```
+
+The frontend can be added later.
+
+---
+
+# 4. Create a New DDEV WordPress Project
+
+Create a project directory:
+
+```bash
+mkdir my-headless-site
+cd my-headless-site
+```
+
+Initialize DDEV as a WordPress project:
+
+```bash
+ddev config --project-type=wordpress
+```
+
+Start the environment:
+
+```bash
+ddev start
+```
+
+DDEV will create a local HTTPS URL based on the project name, normally resembling:
+
+```text
+https://my-headless-site.ddev.site
+```
+
+DDEV's standard WordPress workflow supports creating the project, downloading WordPress with WP-CLI and launching the site.
+
+---
+
+# 5. Download WordPress
+
+Now download WordPress:
+
+```bash
+ddev wp core download
+```
+
+The WordPress files will be placed inside the project.
+
+You can check the installation with:
+
+```bash
+ddev wp core version
+```
+
+You should see the installed WordPress version.
+
+---
+
+# 6. Install WordPress
+
+There are two ways to complete the installation.
+
+You can launch the site:
+
+```bash
+ddev launch
+```
+
+and complete the WordPress installation through the browser.
+
+Alternatively, WP-CLI can install it directly.
+
+For example:
+
+```bash
+ddev wp core install \
+  --url='$DDEV_PRIMARY_URL' \
+  --title='My Headless Site' \
+  --admin_user=admin \
+  --admin_password=admin \
+  --admin_email=admin@example.com
+```
+
+DDEV documents this WP-CLI installation workflow for WordPress projects.
+
+For a real project, use a strong administrator password rather than the example password shown above.
+
+After installation, open:
+
+```text
+https://my-headless-site.ddev.site/wp-admin/
+```
+
+and log into WordPress.
+
+---
+
+# 7. Verify the Fresh WordPress Installation
+
+Before installing our plugin, make sure the basic WordPress installation works.
+
+Check:
+
+```text
+Frontend
+https://my-headless-site.ddev.site/
+
+Administration
+https://my-headless-site.ddev.site/wp-admin/
+
+REST API
+https://my-headless-site.ddev.site/wp-json/
+```
+
+The REST API should return a JSON response.
+
+At this point, we have an ordinary WordPress installation.
+
+Nothing special has happened yet.
+
+That is important.
+
+We want the manual to demonstrate exactly what our plugin changes.
+
+---
+
+# 8. Install the Full Stack App Plugin
+
+Download the `fullstack-app.zip` package.
+
+Extract it.
+
+Inside the archive you will find the plugin directory:
+
+```text
+fullstack-app/
+```
+
+Copy that directory into:
+
+```text
+wp-content/plugins/
+```
+
+The resulting structure should look like:
+
+```text
+wp-content/
+└── plugins/
+    └── fullstack-app/
+        ├── fullstack-app.php
+        ├── composer.json
+        ├── app/
+        ├── tests/
+        ├── bin/
+        └── vendor/
+```
+
+The included `vendor/` directory means the packaged version already contains its Composer dependencies.
+
+For the normal installation described in this manual, you therefore do not need to run Composer inside the WordPress installation merely to activate the plugin.
+
+---
+
+# 9. Install the Plugin With DDEV
+
+If the ZIP file is downloaded outside the project directory, extract it first.
+
+For example:
+
+```bash
+unzip fullstack-app.zip
+```
+
+Then copy the plugin:
+
+```bash
+cp -r fullstack-app my-headless-site/wp-content/plugins/
+```
+
+Or, if you are already inside the WordPress project:
+
+```bash
+cp -r /path/to/fullstack-app wp-content/plugins/
+```
+
+The important result is:
+
+```text
+wp-content/plugins/fullstack-app/fullstack-app.php
+```
+
+That file is the plugin entry point.
+
+---
+
+# 10. Activate the Plugin
+
+You can activate the plugin through the WordPress dashboard:
+
+```text
+Plugins
+    ↓
+Installed Plugins
+    ↓
+Full Stack App
+    ↓
+Activate
+```
+
+Or use WP-CLI:
+
+```bash
+ddev wp plugin activate fullstack-app
+```
+
+Check the status:
+
+```bash
+ddev wp plugin status fullstack-app
+```
+
+You should see that the plugin is active.
+
+---
+
+# 11. What Happens During Activation?
+
+The plugin does not create a completely separate application server.
+
+Instead, it hooks into WordPress.
+
+The simplified boot process is:
+
+```text
+WordPress
+    │
+    ▼
+Plugin loaded
+    │
+    ▼
+Bootstrap
+    │
+    ▼
+REST API initialization
+    │
+    ▼
+API Registrar
+    │
+    ▼
+Full Stack API routes
+```
+
+The plugin registers its API routes when WordPress initializes the REST API.
+
+This means the API automatically becomes part of the existing WordPress installation.
+
+---
+
+# 12. Test the Status Endpoint
+
+This should be our first API test.
+
+Open:
+
+```text
+https://my-headless-site.ddev.site/wp-json/fullstack/v1/status
+```
+
+Or use `curl`:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/status
+```
+
+A successful response should look similar to:
+
+```json
+{
+    "status": "ok",
+    "application": "Full Stack App",
+    "version": "0.1.0"
+}
+```
+
+This tiny endpoint is extremely useful.
+
+If it works, we know that:
+
+```text
+WordPress
+    +
+Plugin
+    +
+Composer autoloader
+    +
+Bootstrap
+    +
+REST registration
+```
+
+are all functioning.
+
+---
+
+# 13. If the Status Endpoint Returns 404
+
+A 404 response usually means that the custom REST route has not been registered.
+
+Check the following.
+
+### Is the plugin active?
+
+```bash
+ddev wp plugin status fullstack-app
+```
+
+### Does the plugin exist in the correct directory?
+
+```text
+wp-content/plugins/fullstack-app/fullstack-app.php
+```
+
+### Is the REST API working?
+
+Visit:
+
+```text
+/wp-json/
+```
+
+### Restart DDEV
+
+```bash
+ddev restart
+```
+
+### Check the plugin code
+
+Make sure the plugin bootstrap and API registration files are present.
+
+The custom endpoint should not be tested until the ordinary WordPress REST API is functioning.
+
+---
+
+# 14. Create Some WordPress Content
+
+Now the interesting part begins.
+
+The backend needs content to serve.
+
+Create a few normal WordPress posts.
+
+For example:
+
+```text
+Post 1
+Introduction to Headless WordPress
+
+Post 2
+Building PHP Applications With WordPress
+
+Post 3
+Why Server-Side Rendering Still Matters
+```
+
+Publish them.
+
+Then open:
+
+```text
+/wp-json/fullstack/v1/posts
+```
+
+You should receive a JSON response containing the published posts.
+
+The frontend does not need to access the WordPress database directly.
+
+It can consume this endpoint.
+
+---
+
+# 15. The Posts Endpoint
+
+The collection endpoint is:
+
+```text
+GET /wp-json/fullstack/v1/posts
+```
+
+For example:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/posts
+```
+
+The response contains a `data` collection and pagination metadata.
+
+Conceptually:
+
+```json
+{
+    "data": [
+        {
+            "id": 12,
+            "title": "Introduction to Headless WordPress",
+            "slug": "introduction-to-headless-wordpress",
+            "excerpt": "...",
+            "content": "...",
+            "date": "...",
+            "author": {},
+            "categories": [],
+            "featured_image": null,
+            "link": "..."
+        }
+    ],
+    "meta": {
+        "page": 1,
+        "per_page": 10,
+        "total": 3,
+        "total_pages": 1
+    }
+}
+```
+
+The exact values will depend on the content you created.
+
+---
+
+# 16. Pagination
+
+The posts endpoint supports pagination.
+
+For example:
+
+```text
+/wp-json/fullstack/v1/posts?page=1&per_page=10
+```
+
+The two important parameters are:
+
+```text
+page
+per_page
+```
+
+For example:
+
+```text
+?page=2&per_page=5
+```
+
+requests the second page with five posts per page.
+
+The API also returns:
+
+```text
+total
+total_pages
+```
+
+so that a frontend can construct its own pagination interface.
+
+---
+
+# 17. Searching Posts
+
+The posts endpoint also supports search.
+
+For example:
+
+```text
+/wp-json/fullstack/v1/posts?search=wordpress
+```
+
+The API searches the published posts and returns matching results.
+
+This means the frontend can implement a search interface without knowing anything about WordPress's internal search implementation.
+
+The frontend only needs to construct the appropriate API request.
+
+---
+
+# 18. Sorting Posts
+
+Posts can also be ordered.
+
+For example:
+
+```text
+/wp-json/fullstack/v1/posts?orderby=date&order=DESC
+```
+
+or:
+
+```text
+/wp-json/fullstack/v1/posts?orderby=title&order=ASC
+```
+
+Supported ordering values are deliberately controlled by the backend.
+
+This is important because API parameters should not be treated as arbitrary instructions to the database.
+
+The plugin validates incoming values before constructing the WordPress query.
+
+---
+
+# 19. Categories
+
+The category endpoint is:
+
+```text
+GET /wp-json/fullstack/v1/categories
+```
+
+Open:
+
+```text
+https://my-headless-site.ddev.site/wp-json/fullstack/v1/categories
+```
+
+You should receive a collection similar to:
+
+```json
+{
+    "data": [
+        {
+            "id": 4,
+            "name": "Technology",
+            "slug": "technology",
+            "count": 3
+        }
+    ]
+}
+```
+
+You can also request an individual category:
+
+```text
+/wp-json/fullstack/v1/categories/4
+```
+
+where `4` is the category ID.
+
+---
+
+# 20. Filtering Posts by Category
+
+Once you know a category ID, you can use it to filter posts.
+
+For example:
+
+```text
+/wp-json/fullstack/v1/posts?category=4
+```
+
+This allows the frontend to construct category pages without needing to know how WordPress performs the underlying query.
+
+The flow becomes:
+
+```text
+Visitor
+   ↓
+Category page
+   ↓
+Frontend
+   ↓
+API request
+   ↓
+/posts?category=4
+   ↓
+WordPress
+   ↓
+Filtered posts
+```
+
+---
+
+# 21. The Application Repository
+
+The most application-specific feature of the plugin is the application repository.
+
+The plugin registers the custom post type:
+
+```text
+app_repository
+```
+
+This allows WordPress administrators to manage downloadable applications from the dashboard.
+
+The architecture becomes:
+
+```text
+WordPress Dashboard
+       │
+       ▼
+Applications
+       │
+       ├── Title
+       ├── Description
+       ├── Version
+       ├── Operating System
+       ├── Featured Image
+       └── Downloadable File
+```
+
+These applications are then exposed through the API.
+
+---
+
+# 22. Creating an Application
+
+After activating the plugin, look for the application repository section in the WordPress administration area.
+
+Create a new application.
+
+For example:
+
+```text
+Title:
+My Linux Application
+
+Version:
+1.0.0
+
+Operating System:
+Linux / Ubuntu
+```
+
+Add a description.
+
+Add a featured image if required.
+
+Then associate the application's downloadable ZIP file using the application's file metadata.
+
+Publish the application.
+
+---
+
+# 23. The Application API
+
+The application collection endpoint is:
+
+```text
+/wp-json/fullstack/v1/apps
+```
+
+For example:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/apps
+```
+
+A response will contain application data similar to:
+
+```json
+{
+    "data": [
+        {
+            "id": "my-linux-application",
+            "title": "My Linux Application",
+            "version": "1.0.0",
+            "description": "My application description.",
+            "os": "Linux / Ubuntu",
+            "file": "https://example.com/my-application.zip",
+            "date": "Aug 2026"
+        }
+    ]
+}
+```
+
+The frontend can now build an application repository entirely from this data.
+
+---
+
+# 24. Why the Application File Uses WordPress Media
+
+The downloadable ZIP file is associated with the application through WordPress's media system.
+
+The plugin stores the relevant attachment ID as application metadata:
+
+```text
+app_file_id
+```
+
+The API then resolves that attachment into a usable URL.
+
+This is an important design choice.
+
+The frontend does not need to know:
+
+```text
+Which attachment ID?
+Which WordPress metadata field?
+Which media record?
+```
+
+It receives:
+
+```text
+file
+```
+
+and can simply use the URL.
+
+---
+
+# 25. API Response Design
+
+The plugin uses a consistent response structure.
+
+Successful collection responses generally follow:
+
+```json
+{
+    "data": [],
+    "meta": {}
+}
+```
+
+Successful single-resource responses follow:
+
+```json
+{
+    "data": {}
+}
+```
+
+This makes the frontend predictable.
+
+It knows where the useful information lives:
+
+```text
+response.data
+```
+
+and, when applicable:
+
+```text
+response.meta
+```
+
+---
+
+# 26. API Errors
+
+Errors are also normalized.
+
+For example, requesting a resource that does not exist should not result in an ambiguous response.
+
+The API can return:
+
+```json
+{
+    "error": {
+        "code": "fullstack_post_not_found",
+        "message": "Post not found.",
+        "status": 404
+    }
+}
+```
+
+The frontend can therefore handle errors programmatically.
+
+For example:
+
+```text
+404
+    ↓
+Show "Not Found"
+
+400
+    ↓
+Show "Invalid Request"
+
+500
+    ↓
+Show "Server Error"
+```
+
+The application does not need to guess what happened.
+
+---
+
+# 27. Testing the API With curl
+
+For development, `curl` is an excellent way to inspect the backend.
+
+Test status:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/status
+```
+
+Test posts:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/posts
+```
+
+Test categories:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/categories
+```
+
+Test applications:
+
+```bash
+curl https://my-headless-site.ddev.site/wp-json/fullstack/v1/apps
+```
+
+Pretty-print JSON with `jq`:
+
+```bash
+curl -s \
+  https://my-headless-site.ddev.site/wp-json/fullstack/v1/posts \
+  | jq
+```
+
+This is often much faster than debugging a frontend when we simply want to know whether the backend is returning the expected data.
+
+---
+
+# 28. Testing With the Included Scripts
+
+The plugin package also contains API test scripts:
+
+```text
+tests/
+├── api-posts.sh
+└── api-categories.sh
+```
+
+These scripts can be used to test the API from the command line.
+
+Before running them, inspect the configured base URL inside the scripts and make sure it points to your local WordPress installation.
+
+Then make the scripts executable if necessary:
+
+```bash
+chmod +x tests/api-posts.sh
+chmod +x tests/api-categories.sh
+```
+
+Run:
+
+```bash
+./tests/api-posts.sh
+```
+
+and:
+
+```bash
+./tests/api-categories.sh
+```
+
+These tests are useful because they verify the actual HTTP interface rather than merely testing individual PHP functions.
+
+---
+
+# 29. Understanding the Plugin Internals
+
+Once the backend is working, it is useful to understand how the package is organized.
+
+The important classes are:
+
+```text
+app/
+├── Bootstrap.php
+└── Api/
+    ├── Registrar.php
+    ├── Rest.php
+    ├── Status.php
+    ├── Posts.php
+    ├── Categories.php
+    ├── Apps.php
+    ├── ApiResponse.php
+    ├── ApiError.php
+    └── ErrorResponse.php
+```
+
+Their responsibilities can be summarized as:
+
+| Class           | Responsibility                        |
+| --------------- | ------------------------------------- |
+| `Bootstrap`     | Starts the application                |
+| `Registrar`     | Registers API modules                 |
+| `Rest`          | REST-level handling and normalization |
+| `Status`        | Health/status endpoint                |
+| `Posts`         | Post endpoints                        |
+| `Categories`    | Category endpoints                    |
+| `Apps`          | Application repository                |
+| `ApiResponse`   | Standard success responses            |
+| `ApiError`      | Standard API errors                   |
+| `ErrorResponse` | Error response handling               |
+
+This separation is what allows the plugin to grow without becoming one giant PHP file.
+
+---
+
+# 30. Adding the Plugin to an Existing WordPress Site
+
+The plugin can also be installed into an existing WordPress installation.
+
+The process is simpler:
+
+```text
+Existing WordPress
+       │
+       ▼
+Copy fullstack-app/
+       │
+       ▼
+wp-content/plugins/
+       │
+       ▼
+Activate Plugin
+       │
+       ▼
+Custom API
+```
+
+There is no requirement to rebuild the WordPress installation simply because you want to add the API layer.
+
+However, before installing it on an existing production site, make a complete backup of:
+
+```text
+Database
+Uploads
+WordPress files
+```
+
+and test the plugin in a staging environment first.
+
+---
+
+# 31. The Plugin Does Not Replace WordPress Administration
+
+After installation, WordPress remains the place where administrators manage content.
+
+For example:
+
+```text
+Posts
+Categories
+Media
+Pages
+Applications
+```
+
+The public-facing frontend does not need to reproduce those administrative interfaces.
+
+This is the central benefit of the architecture.
+
+The backend remains familiar to WordPress users.
+
+The frontend remains free to be completely custom.
+
+---
+
+# 32. Using the Backend Without Our Frontend
+
+One of the most important properties of the plugin is that it does not require our PHP frontend.
+
+Once the API is working, another application can consume it.
+
+For example:
+
+```text
+WordPress + Full Stack App
+          │
+          ├── PHP frontend
+          ├── Flutter application
+          ├── React application
+          ├── Vue application
+          └── Mobile client
+```
+
+Any client capable of making HTTP requests can potentially consume the API.
+
+This is why the API is the real boundary between the backend and the presentation layer.
+
+---
+
+# 33. Security Considerations
+
+A headless backend should be treated as an application backend, not simply as a public WordPress installation.
+
+For production deployment:
+
+### Use HTTPS
+
+The backend should be served over HTTPS.
+
+### Use strong administrator credentials
+
+Never use development credentials such as:
+
+```text
+admin / admin
+```
+
+in production.
+
+### Keep WordPress updated
+
+The WordPress core, plugins and PHP runtime should be maintained.
+
+### Restrict administrative access
+
+The WordPress dashboard is the backend administration interface and should be protected appropriately.
+
+### Review CORS
+
+During development, permissive CORS can make local development easier.
+
+In production, configure allowed origins according to the actual frontend domains.
+
+### Back up the database
+
+The database contains the content that the API exposes.
+
+A reliable backup strategy is therefore essential.
+
+---
+
+# 34. Development vs Production
+
+The development environment might look like:
+
+```text
+DDEV
+ │
+ ├── WordPress
+ ├── MySQL
+ ├── HTTPS
+ └── WP-CLI
+```
+
+while production might look like:
+
+```text
+Internet
+   │
+   ▼
+Web Server
+   │
+   ▼
+PHP
+   │
+   ▼
+WordPress
+   │
+   ▼
+Full Stack App
+   │
+   ▼
+REST API
+```
+
+The plugin itself does not depend on DDEV.
+
+DDEV is simply our recommended development environment because it provides a repeatable local WordPress environment.
+
+DDEV's project workflow is based around configuring the project, starting the environment and launching the site, while its WordPress integration provides WP-CLI commands inside the project.
+
+---
+
+# 35. A Complete Installation Checklist
+
+At this point, a completely fresh backend should have gone through the following process:
+
+* [ ] Install Docker
+* [ ] Install DDEV
+* [ ] Create a project directory
+* [ ] Run `ddev config --project-type=wordpress`
+* [ ] Run `ddev start`
+* [ ] Download WordPress
+* [ ] Install WordPress
+* [ ] Log into `/wp-admin/`
+* [ ] Copy `fullstack-app` into `wp-content/plugins/`
+* [ ] Activate the plugin
+* [ ] Test `/wp-json/fullstack/v1/status`
+* [ ] Create some posts
+* [ ] Create categories
+* [ ] Create an application
+* [ ] Add application metadata
+* [ ] Add an application ZIP file
+* [ ] Test `/posts`
+* [ ] Test `/categories`
+* [ ] Test `/apps`
+* [ ] Test pagination and filtering
+* [ ] Run the included API tests
+
+If all of these steps succeed, the backend is ready to be consumed by a frontend.
+
+---
+
+# 36. The Finished Backend
+
+After completing the installation, we have transformed a completely ordinary WordPress installation into:
+
+```text
+                    HEADLESS BACKEND
+
+                 ┌───────────────────┐
+                 │     WordPress     │
+                 │                   │
+                 │ Posts             │
+                 │ Categories        │
+                 │ Pages             │
+                 │ Applications      │
+                 │ Media             │
+                 └─────────┬─────────┘
+                           │
+                           ▼
+                 ┌───────────────────┐
+                 │  Full Stack App   │
+                 │      Plugin       │
+                 └─────────┬─────────┘
+                           │
+                           ▼
+                 ┌───────────────────┐
+                 │    REST API       │
+                 │                   │
+                 │ /status           │
+                 │ /posts            │
+                 │ /categories       │
+                 │ /apps             │
+                 └─────────┬─────────┘
+                           │
+                           ▼
+                    JSON responses
+```
+
+The WordPress installation is now ready to serve as the backend for a separate application.
+
+---
+
+# 37. What Comes Next?
+
+This backend package is only half of the reusable system.
+
+The second package is the frontend.
+
+The frontend package contains:
+
+```text
+PHP
+HTML
+CSS
+JavaScript
+```
+
+and provides the public-facing application layer.
+
+The two packages therefore have complementary responsibilities:
+
+```text
+FULL STACK APP BACKEND
+        │
+        │ API
+        ▼
+PHP HEADLESS FRONTEND
+        │
+        ▼
+     Browser
+```
+
+The backend manages the information.
+
+The frontend turns that information into an experience.
+
+In the next manual, we will take the second package, configure it against a WordPress backend, and show how to use it as the foundation for a fast, lightweight headless website.
+
+That is where the two halves of the project finally meet.
+
