@@ -2,7 +2,7 @@
 
 **Version 1.0**
 
-A full-stack web application architecture that separates content management from presentation.
+A full-stack web application architecture that separates content management from presentation so that it maintains separation.
 
 The backend uses **WordPress as a headless CMS**, while the frontend is built as a **standalone PHP application** that communicates with the backend through a custom REST API.
 
