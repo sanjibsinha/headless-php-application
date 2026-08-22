@@ -63,4 +63,14 @@ class PostService
     {
         return $this->api->get("/posts/{$id}");
     }
+
+    /**
+     * Get a single published post by slug.
+     */
+    public function findBySlug(string $slug): array
+    {
+        return $this->api->get(
+            '/posts/slug/' . rawurlencode($slug)
+        );
+    }
 }

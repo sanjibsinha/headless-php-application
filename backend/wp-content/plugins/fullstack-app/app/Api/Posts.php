@@ -47,6 +47,23 @@ class Posts {
 				],
 			]
 		);
+
+		// GET /posts/slug/{slug}
+		register_rest_route(
+			'fullstack/v1',
+			'/posts/slug/(?P<slug>[a-z0-9-]+)',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ self::class, 'showBySlug' ],
+				'permission_callback' => '__return_true',
+				'args'                => [
+					'slug' => [
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_title',
+					],
+				],
+			]
+		);
 	}
 
 	/**
@@ -81,17 +98,14 @@ class Posts {
 				'sanitize_callback' => 'sanitize_text_field',
 				'validate_callback' => function ( $value ) {
 
-					// No category filter.
 					if ( '' === $value ) {
 						return true;
 					}
 
-					// Numeric category ID.
 					if ( ctype_digit( (string) $value ) ) {
 						return (int) $value > 0;
 					}
 
-					// Category slug.
 					return (bool) preg_match(
 						'/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
 						$value
@@ -167,21 +181,15 @@ class Posts {
 			'order'          => $order,
 		];
 
-		// Optional search filter.
 		if ( ! empty( $search ) ) {
 			$query_args['s'] = $search;
 		}
 
-		// Optional category filter.
-		// Accept either a numeric category ID or a category slug.
 		if ( ! empty( $category ) ) {
 
 			if ( ctype_digit( (string) $category ) ) {
-
 				$query_args['cat'] = (int) $category;
-
 			} else {
-
 				$query_args['category_name'] = $category;
 			}
 		}
@@ -223,6 +231,43 @@ class Posts {
 			'post' !== $post->post_type ||
 			'publish' !== $post->post_status
 		) {
+			return ApiError::make(
+				'fullstack_post_not_found',
+				'Post not found.',
+				404
+			);
+		}
+
+		return ApiResponse::success(
+			self::transform( $post )
+		);
+	}
+
+	/**
+	 * GET /posts/slug/{slug}
+	 *
+	 * Return a single published post by slug.
+	 */
+	public static function showBySlug(
+		WP_REST_Request $request
+	): WP_REST_Response|WP_Error {
+
+		$slug = sanitize_title(
+			$request->get_param( 'slug' )
+		);
+
+		$query = new WP_Query(
+			[
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'name'           => $slug,
+				'posts_per_page' => 1,
+			]
+		);
+
+		$post = $query->posts[0] ?? null;
+
+		if ( ! $post ) {
 			return ApiError::make(
 				'fullstack_post_not_found',
 				'Post not found.',
